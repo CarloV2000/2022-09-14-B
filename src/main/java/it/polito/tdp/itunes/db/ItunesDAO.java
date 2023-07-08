@@ -139,4 +139,84 @@ public class ItunesDAO {
 		}
 		return result;
 	}
+
+	public List<Album> getAllAlbums(Double durataMin) {
+		final String sql = "SELECT a.*, SUM(t.Milliseconds)AS durataMS, COUNT(t.Milliseconds)AS nBrani "
+				+ "FROM album a, track t "
+				+ "WHERE a.AlbumId = t.AlbumId "
+				+ "GROUP BY a.AlbumId ";
+		List<Album> result = new LinkedList<>();
+		
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet res = st.executeQuery();
+
+			while (res.next()) {
+				Double durataTot = res.getDouble("durataMS");
+				Integer nCanzoni = res.getInt("nBrani");
+				Double durata = durataTot/nCanzoni;
+				if(durata >= durataMin) {
+					result.add(new Album(res.getInt("AlbumId"), res.getString("Title"), durata));
+				}
+			}
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("SQL Error");
+		}
+		return result;
+	}
+	
+	public Double getWeight(Album x, Album y) {
+		final String sql = "SELECT COUNT(DISTINCT p1.PlaylistId)AS peso "
+				+ "FROM track t1, playlisttrack p1, track t2, playlisttrack p2 "
+				+ "WHERE t1.TrackId = p1.TrackId AND t1.AlbumId = ? "
+				+ "AND t2.TrackId = p2.TrackId AND t2.AlbumId = ? "
+				+ "AND p1.PlaylistId = p2.PlaylistId ";
+		Double peso = 0.0;
+		
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, x.getAlbumId());
+			st.setInt(2, y.getAlbumId());
+			ResultSet res = st.executeQuery();
+
+			if (res.first()) {
+				peso = res.getDouble("peso");
+				
+			}
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("SQL Error");
+		}
+		return peso;
+	}
+
+	public Integer getNBrani(Album x) {
+		final String sql = "SELECT COUNT(DISTINCT a.TrackId)AS n "
+				+ "FROM track a "
+				+ "WHERE a.AlbumId = ? ";
+		Integer n = 0;
+		
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, x.getAlbumId());
+			ResultSet res = st.executeQuery();
+
+			if (res.first()) {
+				n = res.getInt("n");
+				
+			}
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("SQL Error");
+		}
+		return n;
+	}
+	
 }
